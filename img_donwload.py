@@ -1,39 +1,14 @@
 import numpy as np
-import cv2, json, requests, csv
+import cv2, json, requests, csv, os, argparse
 from requests.structures import CaseInsensitiveDict
 
-##########  이미지   #######################################
-
-############ image info 파일 ###############################
-def open_info_file(file_path):
-    with open(file_path, 'r', encoding='utf8') as f:
-        data = f.readlines()
-        img_info = data[-1]
-    img_infos = json.loads(img_info)
-    return img_infos
-
-
-
 class Receipt(object):
-    def __init__(self, img_info):
-        self.token = 'Bearer '+'6H6A0dEoX4asw2Kg83BDrg=='
-        self.info = self.get_info(img_info)
+    def __init__(self, args, img_info):
+        self.root_path = args.root_path
+        self.token = args.token
+        self.info = img_info
         self.image = self.get_image()
-        self.show_img() # 디버그용
-
-    def get_info(self, img_info):
-        info = {
-            'FILE_UUID' : img_info['FILE_UUID'],
-            'IO_TP' : img_info['IO_TP'],
-            'TRX_DV' : img_info['TRX_DV'],
-            'CLNT_ID' : img_info['CLNT_ID'],
-            'CLNT_NM' : img_info['CLNT_NM'],
-            'TOT_AMT' : img_info['TOT_AMT'],
-            'SPL_AMT' : img_info['SPL_AMT'],
-            'TAX_AMT' : img_info['TAX_AMT'],
-            'IMAGE_URL' : img_info['IMAGE_URL']
-        }
-        return info
+        # self.show_img() # 디버그용
 
     def get_image(self):
         byte_str_image = self.request_image()
@@ -62,18 +37,49 @@ class Receipt(object):
 
     def save_image(self):
         file_name = f"{self.info['FILE_UUID']}.jpg"
-        cv2.imwrite(file_name, self.image)
+        save_folder_path = os.path.join(self.root_path, 'images')
+        if not os.path.exists(save_folder_path):
+            os.makedirs(save_folder_path)
+        save_path = os.path.join(save_folder_path, file_name)
+        cv2.imwrite(save_path, self.image)
 
     def save_csv(self):
         file_name = 'receipts_info.csv'
-        # with open(file_name, 'w') as csv_f:
-        #     writer = csv.DictWriter(csv_f)
-        #     writer.writeheader()
-        #     for data in dict_data:
-        #         writer.writerow(data)
+        file_path = os.path.join(self.root_path, file_name)
+        with open(file_path, 'a') as csv_f:
+            fieldnames= self.info.keys()
+            writer = csv.DictWriter(csv_f, fieldnames=fieldnames)
+            writer.writeheader()
+            writer.writerow(self.info)
+
+class Utils(object):
+    def open_info_file(self, file_path):
+        with open(file_path, 'r', encoding='utf8') as f:
+            data = f.readlines()
+            img_info = data[-1]
+            img_infos = json.loads(img_info)
+        return img_infos
+
+    def del_old_csv(self, root_path):
+        file_name = 'receipts_info.csv'
+        file_path = os.path.join(root_path, file_name)
+        if os.path.isfile(file_path):
+            os.remove(file_path)
+
+
+def main(args):
+    # info 파일 읽고 이미 있는 csv 파일 지움
+    utils = Utils()
+    img_infos = utils.open_info_file(args.info_file)
+    utils.del_old_csv(args.root_path)
+
+    # 이미지 하나씩 저장 및 csv에 기록
+    for img_info in img_infos:
+        receipt = Receipt(args, img_info)
+        receipt.save_image()
+        receipt.save_csv()
 
 if __name__ == '__main__':
-    
     # key_meaning = {
     #     'FILE_UUID' : '파일일련번호', 
     #     'IO_TP' : '매입매출구분',
@@ -84,12 +90,15 @@ if __name__ == '__main__':
     #     'SPL_AMT' : '공급가액',
     #     'TAX_AMT' : '부가세액'
     # }
+    root_path = os.path.dirname(__file__)
+    
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--root_path', default=root_path)
+    parser.add_argument('--image_folder', default=f'{root_path}/images')
+    parser.add_argument('--info_file', default=f'{root_path}/nuli_data/SSEM BOOK IMAGES_20210609.ssem')
+    parser.add_argument('--token', default='Bearer '+'6H6A0dEoX4asw2Kg83BDrg==')
 
+    args = parser.parse_args()
 
-    file_path = '/home/gucheol/다운로드/SSEM BOOK IMAGES_20210609.ssem'
-    img_infos = open_info_file(file_path)
-
-    for img_info in img_infos:
-        receipt = Receipt(img_info)
-        receipt.save_image()
-
+    main(args)
+    
