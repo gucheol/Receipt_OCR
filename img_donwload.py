@@ -1,5 +1,6 @@
 import numpy as np
 import cv2, json, requests, csv, os, argparse
+from tqdm import tqdm
 from requests.structures import CaseInsensitiveDict
 
 class Receipt(object):
@@ -74,7 +75,7 @@ def main(args):
     utils.del_old_csv(args.root_path)
 
     # 이미지 하나씩 저장 및 csv에 기록
-    for img_info in img_infos:
+    for img_info in tqdm(img_infos):
         receipt = Receipt(args, img_info)
         receipt.save_image()
         receipt.save_csv()
