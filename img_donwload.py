@@ -5,7 +5,7 @@ from requests.structures import CaseInsensitiveDict
 class Receipt(object):
     def __init__(self, args, img_info):
         self.root_path = args.root_path
-        self.token = args.token
+        self.token = 'Bearer '+ args.token
         self.info = img_info
         self.image = self.get_image()
         # self.show_img() # 디버그용
@@ -90,13 +90,13 @@ if __name__ == '__main__':
     #     'SPL_AMT' : '공급가액',
     #     'TAX_AMT' : '부가세액'
     # }
-    root_path = os.path.dirname(__file__)
+    root_path = os.path.dirname(os.path.abspath(__file__))
     
     parser = argparse.ArgumentParser()
     parser.add_argument('--root_path', default=root_path)
     parser.add_argument('--image_folder', default=f'{root_path}/images')
     parser.add_argument('--info_file', default=f'{root_path}/nuli_data/SSEM BOOK IMAGES_20210609.ssem')
-    parser.add_argument('--token', default='Bearer '+'6H6A0dEoX4asw2Kg83BDrg==')
+    parser.add_argument('--token')
 
     args = parser.parse_args()
 
